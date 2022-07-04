@@ -71,6 +71,24 @@ cat <<EOF
 EOF
     fi
 
+    if [ -n "${IMAGE_SERVICE_BASE_URL:-}" ]; then
+cat <<EOF
+  IMAGE_SERVICE_BASE_URL: '${IMAGE_SERVICE_BASE_URL}'
+EOF
+    fi
+
+    if [ -n "${IMAGE_SERVICE_SCHEME:-}" ]; then
+cat <<EOF
+  IMAGE_SERVICE_SCHEME: '${IMAGE_SERVICE_SCHEME}'
+EOF
+    fi
+
+    if [ -n "${IMAGE_SERVICE_HOST:-}" ]; then
+cat <<EOF
+  IMAGE_SERVICE_HOST: '${IMAGE_SERVICE_HOST}'
+EOF
+    fi
+
     if [ -n "${PUBLIC_CONTAINER_REGISTRIES:-}" ]; then
 cat <<EOF
   PUBLIC_CONTAINER_REGISTRIES: 'quay.io,${PUBLIC_CONTAINER_REGISTRIES}'
