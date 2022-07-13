@@ -308,24 +308,24 @@ func getDBContext() DBContext {
 		return gDbCtx
 	}
 
-	if os.Getenv("SKIP_UT_DB") != "" {
-		return &NoDBContext{}
-	}
+	// if os.Getenv("SKIP_UT_DB") != "" {
+	return &NoDBContext{}
+	// }
 
-	k8sContext, err := getK8sClient()
-	if err == nil {
-		err = k8sContext.Create()
-		if err == nil {
-			gDbCtx = k8sContext
-			return k8sContext
-		}
-	}
-	dockerContext, err := getDockerClient()
-	Expect(err).ShouldNot(HaveOccurred())
-	err = dockerContext.Create()
-	Expect(err).ShouldNot(HaveOccurred())
-	gDbCtx = dockerContext
-	return dockerContext
+	// k8sContext, err := getK8sClient()
+	// if err == nil {
+	// 	err = k8sContext.Create()
+	// 	if err == nil {
+	// 		gDbCtx = k8sContext
+	// 		return k8sContext
+	// 	}
+	// }
+	// dockerContext, err := getDockerClient()
+	// Expect(err).ShouldNot(HaveOccurred())
+	// err = dockerContext.Create()
+	// Expect(err).ShouldNot(HaveOccurred())
+	// gDbCtx = dockerContext
+	// return dockerContext
 }
 
 func InitializeDBTest() {
