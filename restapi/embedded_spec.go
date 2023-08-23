@@ -5651,7 +5651,8 @@ func init() {
               "none",
               "nutanix",
               "vsphere",
-              "oci"
+              "oci",
+              "external"
             ],
             "type": "string",
             "description": "The provider platform type.",
@@ -7486,7 +7487,8 @@ func init() {
         "FULL_ISO",
         "EXTERNAL_PLATFORM_OCI",
         "DUAL_STACK",
-        "PLATFORM_MANAGED_NETWORKING"
+        "PLATFORM_MANAGED_NETWORKING",
+        "EXTERNAL_PLATFORM"
       ]
     },
     "free-addresses-list": {
@@ -9441,6 +9443,9 @@ func init() {
         "type"
       ],
       "properties": {
+        "external": {
+          "$ref": "#/definitions/platform_external"
+        },
         "is_external": {
           "description": "Used by the service to indicate that the platform-specific components are not included in\nOpenShift and must be provided as manifests separately.",
           "type": "boolean",
@@ -9452,6 +9457,22 @@ func init() {
       },
       "x-go-custom-tag": "gorm:\"embedded;embeddedPrefix:platform_\""
     },
+    "platform_external": {
+      "type": "object",
+      "properties": {
+        "cloud_controller_manager": {
+          "type": "string",
+          "default": "",
+          "enum": [
+            "",
+            "External"
+          ]
+        },
+        "platform_name": {
+          "type": "string"
+        }
+      }
+    },
     "platform_type": {
       "type": "string",
       "enum": [
@@ -9459,7 +9480,8 @@ func init() {
         "nutanix",
         "vsphere",
         "none",
-        "oci"
+        "oci",
+        "external"
       ]
     },
     "preflight-hardware-requirements": {
@@ -15912,7 +15934,8 @@ func init() {
               "none",
               "nutanix",
               "vsphere",
-              "oci"
+              "oci",
+              "external"
             ],
             "type": "string",
             "description": "The provider platform type.",
@@ -17832,7 +17855,8 @@ func init() {
         "FULL_ISO",
         "EXTERNAL_PLATFORM_OCI",
         "DUAL_STACK",
-        "PLATFORM_MANAGED_NETWORKING"
+        "PLATFORM_MANAGED_NETWORKING",
+        "EXTERNAL_PLATFORM"
       ]
     },
     "free-addresses-list": {
@@ -19778,6 +19802,9 @@ func init() {
         "type"
       ],
       "properties": {
+        "external": {
+          "$ref": "#/definitions/platform_external"
+        },
         "is_external": {
           "description": "Used by the service to indicate that the platform-specific components are not included in\nOpenShift and must be provided as manifests separately.",
           "type": "boolean",
@@ -19789,6 +19816,22 @@ func init() {
       },
       "x-go-custom-tag": "gorm:\"embedded;embeddedPrefix:platform_\""
     },
+    "platform_external": {
+      "type": "object",
+      "properties": {
+        "cloud_controller_manager": {
+          "type": "string",
+          "default": "",
+          "enum": [
+            "",
+            "External"
+          ]
+        },
+        "platform_name": {
+          "type": "string"
+        }
+      }
+    },
     "platform_type": {
       "type": "string",
       "enum": [
@@ -19796,7 +19839,8 @@ func init() {
         "nutanix",
         "vsphere",
         "none",
-        "oci"
+        "oci",
+        "external"
       ]
     },
     "preflight-hardware-requirements": {
