@@ -6153,6 +6153,7 @@ definitions:
       - external
 
   platform_external:
+    x-go-custom-tag: gorm:"embedded;embeddedPrefix:platform_external"
     type: object
     properties:
       platform_name:

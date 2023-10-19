@@ -9471,7 +9471,8 @@ func init() {
         "platform_name": {
           "type": "string"
         }
-      }
+      },
+      "x-go-custom-tag": "gorm:\"embedded;embeddedPrefix:platform_external\""
     },
     "platform_type": {
       "type": "string",
@@ -19830,7 +19831,8 @@ func init() {
         "platform_name": {
           "type": "string"
         }
-      }
+      },
+      "x-go-custom-tag": "gorm:\"embedded;embeddedPrefix:platform_external\""
     },
     "platform_type": {
       "type": "string",
