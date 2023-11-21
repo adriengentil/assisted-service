@@ -23,3 +23,9 @@ func NewExternalProvider(log logrus.FieldLogger) provider.Provider {
 func (p *externalProvider) Name() models.PlatformType {
 	return models.PlatformTypeExternal
 }
+
+func (p *externalProvider) IsProviderForCluster(platform *models.Platform) bool {
+	return platform != nil &&
+		platform.Type != nil &&
+		*platform.Type == p.Name()
+}

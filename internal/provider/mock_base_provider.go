@@ -95,6 +95,20 @@ func (mr *MockProviderMockRecorder) IsHostSupported(arg0 interface{}) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsHostSupported", reflect.TypeOf((*MockProvider)(nil).IsHostSupported), arg0)
 }
 
+// IsProviderForCluster mocks base method.
+func (m *MockProvider) IsProviderForCluster(arg0 *models.Platform) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsProviderForCluster", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsProviderForCluster indicates an expected call of IsProviderForCluster.
+func (mr *MockProviderMockRecorder) IsProviderForCluster(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsProviderForCluster", reflect.TypeOf((*MockProvider)(nil).IsProviderForCluster), arg0)
+}
+
 // Name mocks base method.
 func (m *MockProvider) Name() models.PlatformType {
 	m.ctrl.T.Helper()

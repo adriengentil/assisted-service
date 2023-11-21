@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//
 type nutanixProvider struct {
 	Log logrus.FieldLogger
 }
@@ -24,6 +23,12 @@ func NewNutanixProvider(log logrus.FieldLogger) provider.Provider {
 // Name returns the name of the provider
 func (p *nutanixProvider) Name() models.PlatformType {
 	return models.PlatformTypeNutanix
+}
+
+func (p *nutanixProvider) IsProviderForCluster(platform *models.Platform) bool {
+	return platform != nil &&
+		platform.Type != nil &&
+		*platform.Type == p.Name()
 }
 
 func (p *nutanixProvider) IsHostSupported(host *models.Host) (bool, error) {

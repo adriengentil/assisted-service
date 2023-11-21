@@ -2567,7 +2567,7 @@ func (b *bareMetalInventory) updatePlatformParams(params installer.V2UpdateClust
 		updates["platform_is_external"] = swag.BoolValue(params.ClusterUpdateParams.Platform.IsExternal)
 
 		err := b.providerRegistry.SetPlatformUsages(
-			common.PlatformTypeValue(params.ClusterUpdateParams.Platform.Type), usages, b.usageApi)
+			params.ClusterUpdateParams.Platform, usages, b.usageApi)
 		if err != nil {
 			return fmt.Errorf("failed setting platform usages, error is: %w", err)
 		}
@@ -2732,7 +2732,7 @@ func (b *bareMetalInventory) setDefaultUsage(cluster *models.Cluster) error {
 		&map[string]interface{}{"hyperthreading_enabled": cluster.Hyperthreading}, usages)
 	b.setUserManagedNetworkingAndMultiNodeUsage(swag.BoolValue(cluster.UserManagedNetworking), swag.StringValue(cluster.HighAvailabilityMode), usages)
 	//write all the usages to the cluster object
-	err := b.providerRegistry.SetPlatformUsages(common.PlatformTypeValue(cluster.Platform.Type), usages, b.usageApi)
+	err := b.providerRegistry.SetPlatformUsages(cluster.Platform, usages, b.usageApi)
 	if err != nil {
 		return fmt.Errorf("failed setting platform usages, error is: %w", err)
 	}

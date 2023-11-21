@@ -31,13 +31,13 @@ type ProviderRegistry interface {
 	GetSupportedProvidersByHosts(hosts []*models.Host) ([]models.PlatformType, error)
 	// AddPlatformToInstallConfig adds the provider platform to the installconfig platform field,
 	// sets platform fields from values within the cluster model.
-	AddPlatformToInstallConfig(p models.PlatformType, cfg *installcfg.InstallerConfigBaremetal, cluster *common.Cluster) error
+	AddPlatformToInstallConfig(cfg *installcfg.InstallerConfigBaremetal, cluster *common.Cluster) error
 	// SetPlatformUsages uses the usageApi to update platform specific usages
-	SetPlatformUsages(p models.PlatformType, usages map[string]models.Usage, usageApi usage.API) error
+	SetPlatformUsages(platform *models.Platform, usages map[string]models.Usage, usageApi usage.API) error
 	// IsHostSupported checks if the provider supports the host
-	IsHostSupported(p models.PlatformType, host *models.Host) (bool, error)
+	IsHostSupported(platform *models.Platform, host *models.Host) (bool, error)
 	// AreHostsSupported checks if the provider supports the hosts
-	AreHostsSupported(p models.PlatformType, hosts []*models.Host) (bool, error)
+	AreHostsSupported(platform *models.Platform, hosts []*models.Host) (bool, error)
 	// PreCreateManifestsHook allows the provider to perform additional tasks required before the cluster manifests are created
 	PreCreateManifestsHook(cluster *common.Cluster, envVars *[]string, workDir string) error
 	// PostCreateManifestsHook allows the provider to perform additional tasks required after the cluster manifests are created
@@ -52,27 +52,38 @@ type Registry interface {
 	Register(provider provider.Provider)
 	// Get returns a provider registered to a name.
 	// if provider is not registered returns an ErrNoSuchProvider
-	Get(name string) (provider.Provider, error)
+	Get(platform *models.Platform) (provider.Provider, error)
 }
 
 type registry struct {
-	providers map[string]provider.Provider
+	providers []provider.Provider
 }
 
 // NewProviderRegistry creates a new copy of a Registry.
 func NewProviderRegistry() ProviderRegistry {
 	return &registry{
-		providers: map[string]provider.Provider{},
+		providers: []provider.Provider{},
 	}
 }
 
 func (r *registry) Register(provider provider.Provider) {
-	r.providers[string(provider.Name())] = provider
+	r.providers = append(r.providers, provider)
 }
 
-func (r *registry) Get(name string) (provider.Provider, error) {
-	if p, ok := r.providers[name]; ok {
-		return p, nil
+// func (r *registry) Get(name string) (provider.Provider, error) {
+// 	for _, provider := range r.providers {
+// 		if string(provider.Name()) == name {
+// 			return provider, nil
+// 		}
+// 	}
+// 	return nil, ErrNoSuchProvider
+// }
+
+func (r *registry) Get(platform *models.Platform) (provider.Provider, error) {
+	for _, provider := range r.providers {
+		if provider.IsProviderForCluster(platform) {
+			return provider, nil
+		}
 	}
 	return nil, ErrNoSuchProvider
 }
@@ -82,8 +93,8 @@ func (r *registry) Name() models.PlatformType {
 	return ""
 }
 
-func (r *registry) AddPlatformToInstallConfig(p models.PlatformType, cfg *installcfg.InstallerConfigBaremetal, cluster *common.Cluster) error {
-	currentProvider, err := r.Get(string(p))
+func (r *registry) AddPlatformToInstallConfig(cfg *installcfg.InstallerConfigBaremetal, cluster *common.Cluster) error {
+	currentProvider, err := r.Get(cluster.Platform)
 	if err != nil {
 		return fmt.Errorf("error adding platform to install config, platform provider wasn't set: %w", err)
 	}
@@ -91,25 +102,25 @@ func (r *registry) AddPlatformToInstallConfig(p models.PlatformType, cfg *instal
 }
 
 func (r *registry) SetPlatformUsages(
-	p models.PlatformType, usages map[string]models.Usage, usageApi usage.API) error {
-	currentProvider, err := r.Get(string(p))
+	platform *models.Platform, usages map[string]models.Usage, usageApi usage.API) error {
+	currentProvider, err := r.Get(platform)
 	if err != nil {
 		return fmt.Errorf("error adding platform to install config, platform provider wasn't set: %w", err)
 	}
 	return currentProvider.SetPlatformUsages(usages, usageApi)
 }
 
-func (r *registry) IsHostSupported(p models.PlatformType, host *models.Host) (bool, error) {
-	currentProvider, err := r.Get(string(p))
+func (r *registry) IsHostSupported(platform *models.Platform, host *models.Host) (bool, error) {
+	currentProvider, err := r.Get(platform)
 	if err != nil {
 		return false, fmt.Errorf("error while checking if hosts are supported by platform %s, error %w",
-			string(p), err)
+			string(common.PlatformTypeValue(platform.Type)), err)
 	}
 	return currentProvider.IsHostSupported(host)
 }
 
-func (r *registry) AreHostsSupported(p models.PlatformType, hosts []*models.Host) (bool, error) {
-	currentProvider, err := r.Get(string(p))
+func (r *registry) AreHostsSupported(platform *models.Platform, hosts []*models.Host) (bool, error) {
+	currentProvider, err := r.Get(platform)
 	if err != nil {
 		return false, fmt.Errorf("error while checking if hosts are supported by platform %s, error %w",
 			currentProvider.Name(), err)
@@ -140,7 +151,7 @@ func (r *registry) PreCreateManifestsHook(cluster *common.Cluster, envVars *[]st
 	if cluster == nil || cluster.Platform == nil {
 		return errors.New("unable to get the platform type")
 	}
-	currentProvider, err := r.Get(string(common.PlatformTypeValue(cluster.Platform.Type)))
+	currentProvider, err := r.Get(cluster.Platform)
 	if err != nil {
 		return fmt.Errorf("error while running pre creation manifests hook on platform %s, error %w",
 			currentProvider.Name(), err)
@@ -152,7 +163,7 @@ func (r *registry) PostCreateManifestsHook(cluster *common.Cluster, envVars *[]s
 	if cluster == nil || cluster.Platform == nil {
 		return errors.New("unable to get the platform type")
 	}
-	currentProvider, err := r.Get(string(common.PlatformTypeValue(cluster.Platform.Type)))
+	currentProvider, err := r.Get(cluster.Platform)
 	if err != nil {
 		return fmt.Errorf("error while running post creation manifests hook on platform %s, error %w",
 			currentProvider.Name(), err)

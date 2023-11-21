@@ -9,7 +9,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//
 type vsphereProvider struct {
 	Log logrus.FieldLogger
 }
@@ -24,6 +23,12 @@ func NewVsphereProvider(log logrus.FieldLogger) provider.Provider {
 // Name returns the name of the provider
 func (p *vsphereProvider) Name() models.PlatformType {
 	return models.PlatformTypeVsphere
+}
+
+func (p *vsphereProvider) IsProviderForCluster(platform *models.Platform) bool {
+	return platform != nil &&
+		platform.Type != nil &&
+		*platform.Type == p.Name()
 }
 
 func (p *vsphereProvider) IsHostSupported(host *models.Host) (bool, error) {

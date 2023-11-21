@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//
 type noneProvider struct {
 	Log logrus.FieldLogger
 }
@@ -21,6 +20,12 @@ func NewNoneProvider(log logrus.FieldLogger) provider.Provider {
 // Name returns the name of the provider
 func (p *noneProvider) Name() models.PlatformType {
 	return models.PlatformTypeNone
+}
+
+func (p *noneProvider) IsProviderForCluster(platform *models.Platform) bool {
+	return platform != nil &&
+		platform.Type != nil &&
+		*platform.Type == p.Name()
 }
 
 func (p *noneProvider) IsHostSupported(_ *models.Host) (bool, error) {

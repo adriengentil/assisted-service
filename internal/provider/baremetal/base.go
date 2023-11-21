@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-//
 type baremetalProvider struct {
 	Log logrus.FieldLogger
 }
@@ -21,6 +20,12 @@ func NewBaremetalProvider(log logrus.FieldLogger) provider.Provider {
 // Name returns the name of the provider
 func (p *baremetalProvider) Name() models.PlatformType {
 	return models.PlatformTypeBaremetal
+}
+
+func (p *baremetalProvider) IsProviderForCluster(platform *models.Platform) bool {
+	return platform != nil &&
+		platform.Type != nil &&
+		*platform.Type == p.Name()
 }
 
 func (p *baremetalProvider) IsHostSupported(_ *models.Host) (bool, error) {
