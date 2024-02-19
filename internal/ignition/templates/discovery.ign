@@ -42,6 +42,11 @@
         "name": "iscsistart.service",
         "enabled": true,
         "contents": {{ executeTemplate "iscsistart.service" . | toString | toJson }}
+    },
+    {
+        "name": "oci-network-if-config.service",
+        "enabled": true,
+        "contents": {{ executeTemplate "oci-network-if-config.service" . | toString | toJson }}
     }{{end}}
     ]
   },
@@ -72,6 +77,15 @@
           "name": "root"
       },
       "contents": { "source": "data:text/plain;charset=utf-8;base64,{{ executeTemplate "multipath.conf" . | toBase64 }}" }
+    },
+    {
+      "overwrite": true,
+      "path": "/usr/local/bin/oci-network-if-config.sh",
+      "mode": 493,
+      "user": {
+          "name": "root"
+      },
+      "contents": { "source": "data:text/plain;charset=utf-8;base64,{{ executeTemplate "oci-network-if-config.sh" . | toBase64 }}" }
     }{{end}},
     {
       "overwrite": true,
