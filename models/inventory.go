@@ -42,6 +42,9 @@ type Inventory struct {
 	// hostname
 	Hostname string `json:"hostname,omitempty"`
 
+	// ibft
+	Ibft []*IbftContext `json:"ibft"`
+
 	// interfaces
 	Interfaces []*Interface `json:"interfaces"`
 
@@ -76,6 +79,10 @@ func (m *Inventory) Validate(formats strfmt.Registry) error {
 	}
 
 	if err := m.validateGpus(formats); err != nil {
+		res = append(res, err)
+	}
+
+	if err := m.validateIbft(formats); err != nil {
 		res = append(res, err)
 	}
 
@@ -185,6 +192,32 @@ func (m *Inventory) validateGpus(formats strfmt.Registry) error {
 					return ve.ValidateName("gpus" + "." + strconv.Itoa(i))
 				} else if ce, ok := err.(*errors.CompositeError); ok {
 					return ce.ValidateName("gpus" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *Inventory) validateIbft(formats strfmt.Registry) error {
+	if swag.IsZero(m.Ibft) { // not required
+		return nil
+	}
+
+	for i := 0; i < len(m.Ibft); i++ {
+		if swag.IsZero(m.Ibft[i]) { // not required
+			continue
+		}
+
+		if m.Ibft[i] != nil {
+			if err := m.Ibft[i].Validate(formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("ibft" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("ibft" + "." + strconv.Itoa(i))
 				}
 				return err
 			}
@@ -350,6 +383,10 @@ func (m *Inventory) ContextValidate(ctx context.Context, formats strfmt.Registry
 		res = append(res, err)
 	}
 
+	if err := m.contextValidateIbft(ctx, formats); err != nil {
+		res = append(res, err)
+	}
+
 	if err := m.contextValidateInterfaces(ctx, formats); err != nil {
 		res = append(res, err)
 	}
@@ -434,6 +471,26 @@ func (m *Inventory) contextValidateGpus(ctx context.Context, formats strfmt.Regi
 					return ve.ValidateName("gpus" + "." + strconv.Itoa(i))
 				} else if ce, ok := err.(*errors.CompositeError); ok {
 					return ce.ValidateName("gpus" + "." + strconv.Itoa(i))
+				}
+				return err
+			}
+		}
+
+	}
+
+	return nil
+}
+
+func (m *Inventory) contextValidateIbft(ctx context.Context, formats strfmt.Registry) error {
+
+	for i := 0; i < len(m.Ibft); i++ {
+
+		if m.Ibft[i] != nil {
+			if err := m.Ibft[i].ContextValidate(ctx, formats); err != nil {
+				if ve, ok := err.(*errors.Validation); ok {
+					return ve.ValidateName("ibft" + "." + strconv.Itoa(i))
+				} else if ce, ok := err.(*errors.CompositeError); ok {
+					return ce.ValidateName("ibft" + "." + strconv.Itoa(i))
 				}
 				return err
 			}

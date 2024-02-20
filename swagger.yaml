@@ -6025,6 +6025,16 @@ definitions:
         format: int32
         description: Route priority metric
 
+  ibft_context:
+    type: object
+    properties:
+      target_name:
+        type: string
+        description: iSCSI target name
+      nic_mac:
+        type: string
+        description: MAC address of the network interface associated with the iSCSI target
+
   inventory:
     type: object
     properties:
@@ -6061,6 +6071,10 @@ definitions:
       tpm_version:
         type: string
         enum: ['none', '1.2', '2.0']
+      ibft:
+        type: array
+        items:
+          $ref: '#/definitions/ibft_context'
 
   free_network_addresses:
     type: object

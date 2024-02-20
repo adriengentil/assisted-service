@@ -8359,6 +8359,19 @@ func init() {
         }
       }
     },
+    "ibft_context": {
+      "type": "object",
+      "properties": {
+        "nic_mac": {
+          "description": "MAC address of the network interface associated with the iSCSI target",
+          "type": "string"
+        },
+        "target_name": {
+          "description": "iSCSI target name",
+          "type": "string"
+        }
+      }
+    },
     "ignition-endpoint": {
       "description": "Explicit ignition endpoint overrides the default ignition endpoint.",
       "type": "object",
@@ -9029,6 +9042,12 @@ func init() {
         },
         "hostname": {
           "type": "string"
+        },
+        "ibft": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ibft_context"
+          }
         },
         "interfaces": {
           "type": "array",
@@ -18981,6 +19000,19 @@ func init() {
         }
       }
     },
+    "ibft_context": {
+      "type": "object",
+      "properties": {
+        "nic_mac": {
+          "description": "MAC address of the network interface associated with the iSCSI target",
+          "type": "string"
+        },
+        "target_name": {
+          "description": "iSCSI target name",
+          "type": "string"
+        }
+      }
+    },
     "ignition-endpoint": {
       "description": "Explicit ignition endpoint overrides the default ignition endpoint.",
       "type": "object",
@@ -19653,6 +19685,12 @@ func init() {
         },
         "hostname": {
           "type": "string"
+        },
+        "ibft": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ibft_context"
+          }
         },
         "interfaces": {
           "type": "array",
