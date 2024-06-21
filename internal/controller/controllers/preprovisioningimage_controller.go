@@ -419,6 +419,11 @@ func (r *PreprovisioningImageReconciler) AddIronicAgentToInfraEnv(ctx context.Co
 		log.Infof("Using override ironic agent image (%s) for infraEnv %s", ironicAgentImage, infraEnv.Name)
 	}
 
+	// try to get the agent image from ICC config
+	if ironicAgentImage == "" {
+		ironicAgentImage = r.BMOUtils.GetIronicAgentImage()
+	}
+
 	// if ironicAgentImage can't be found by version use the default
 	if ironicAgentImage == "" {
 		if infraEnvInternal.CPUArchitecture == common.ARM64CPUArchitecture {
@@ -475,24 +480,24 @@ func (r *PreprovisioningImageReconciler) getIPFamilyForInfraEnv(ctx context.Cont
 }
 
 func (r *PreprovisioningImageReconciler) getIronicServiceURLs(ctx context.Context, infraEnv *common.InfraEnv) (string, string, error) {
-	ironicIPs, inspectorIPs, err := r.BMOUtils.GetIronicIPs()
+	ironicURLs, inspectorURLs, err := r.BMOUtils.GetIronicServiceURLs()
 	if err != nil {
 		return "", "", err
 	}
 
 	// default to the first IP returned
 	// v4 for dualstack hub or whatever family the single stack is
-	ironicURL := getUrlFromIP(ironicIPs[0])
-	inspectorURL := getUrlFromIP(inspectorIPs[0])
+	ironicURL := ironicURLs[0]
+	inspectorURL := inspectorURLs[0]
 
-	if len(ironicIPs) > 1 {
+	if len(ironicURLs) > 1 {
 		v4, v6, err := r.getIPFamilyForInfraEnv(ctx, infraEnv)
 		if err != nil {
 			r.Log.WithError(err).Warnf("failed to determine IP family for infraEnv %s", infraEnv.ID)
 		} else if !v4 && v6 {
 			// spoke is single stack v6 so take v6 hub address
-			ironicURL = getUrlFromIP(ironicIPs[1])
-			inspectorURL = getUrlFromIP(inspectorIPs[1])
+			ironicURL = ironicURLs[1]
+			inspectorURL = inspectorURLs[1]
 		}
 	}
 	return ironicURL, inspectorURL, nil

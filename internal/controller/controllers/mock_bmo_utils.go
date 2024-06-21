@@ -47,18 +47,32 @@ func (mr *MockBMOUtilsMockRecorder) ConvergedFlowAvailable() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConvergedFlowAvailable", reflect.TypeOf((*MockBMOUtils)(nil).ConvergedFlowAvailable))
 }
 
-// GetIronicIPs mocks base method.
-func (m *MockBMOUtils) GetIronicIPs() ([]string, []string, error) {
+// GetIronicAgentImage mocks base method.
+func (m *MockBMOUtils) GetIronicAgentImage() string {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIronicIPs")
+	ret := m.ctrl.Call(m, "GetIronicAgentImage")
+	ret0, _ := ret[0].(string)
+	return ret0
+}
+
+// GetIronicAgentImage indicates an expected call of GetIronicAgentImage.
+func (mr *MockBMOUtilsMockRecorder) GetIronicAgentImage() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIronicAgentImage", reflect.TypeOf((*MockBMOUtils)(nil).GetIronicAgentImage))
+}
+
+// GetIronicServiceURLs mocks base method.
+func (m *MockBMOUtils) GetIronicServiceURLs() ([]string, []string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetIronicServiceURLs")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].([]string)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// GetIronicIPs indicates an expected call of GetIronicIPs.
-func (mr *MockBMOUtilsMockRecorder) GetIronicIPs() *gomock.Call {
+// GetIronicServiceURLs indicates an expected call of GetIronicServiceURLs.
+func (mr *MockBMOUtilsMockRecorder) GetIronicServiceURLs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIronicIPs", reflect.TypeOf((*MockBMOUtils)(nil).GetIronicIPs))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIronicServiceURLs", reflect.TypeOf((*MockBMOUtils)(nil).GetIronicServiceURLs))
 }
