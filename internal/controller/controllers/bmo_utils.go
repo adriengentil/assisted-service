@@ -22,8 +22,8 @@ import (
 
 const (
 	MinimalVersionForConvergedFlow = "4.12.0-0.alpha"
-	mapiNamespace                  = "openshift-machine-api"
-	iccSecretName                  = "metal3-image-customization-config"
+	ICCNamespace                   = "openshift-machine-api"
+	ICCSecretName                  = "metal3-image-customization-config" // #nosec G101
 	ironicBaseURLKey               = "IRONIC_BASE_URL"
 	ironicInspectorBaseURLKey      = "IRONIC_INSPECTOR_BASE_URL"
 	ironicAgentImageKey            = "IRONIC_AGENT_IMAGE"
@@ -145,7 +145,7 @@ func (r *bmoUtils) getIronicURLsFromConfig() ([]string, []string, error) {
 		return nil, nil, err
 	}
 
-	ironicURLs, err := getURLs(secret, ironicAgentImageKey)
+	ironicURLs, err := getURLs(secret, ironicBaseURLKey)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -175,7 +175,7 @@ func (r *bmoUtils) getProvisioningInfo() (*provisioning.ProvisioningInfo, error)
 
 func (r *bmoUtils) getImageCustomizationSecret() (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
-	namespacedName := types.NamespacedName{Name: iccSecretName, Namespace: mapiNamespace}
+	namespacedName := types.NamespacedName{Name: ICCSecretName, Namespace: ICCNamespace}
 	if err := r.c.Get(context.TODO(), namespacedName, secret); err != nil {
 		return nil, err
 	}

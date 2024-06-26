@@ -92,10 +92,11 @@ var _ = Describe("bmoUtils", func() {
 				},
 			}
 			Expect(c.Create(context.Background(), provisioningInfo)).To(BeNil())
-			serviceIPs, inspectorIPs, err := bmoUtils.GetIronicIPs()
+			serviceIPs, inspectorIPs, err := bmoUtils.GetIronicServiceURLs()
 			Expect(err).Should(BeNil())
-			Expect(serviceIPs[0]).Should(Equal(ironicIP))
-			Expect(inspectorIPs[0]).Should(Equal(ironicIP))
+			ironicURL := getUrlFromIP(ironicIP)
+			Expect(serviceIPs[0]).Should(Equal(ironicURL))
+			Expect(inspectorIPs[0]).Should(Equal(ironicURL))
 		})
 		It("failed to determine inspector URL", func() {
 			bmoUtils := &bmoUtils{
@@ -114,7 +115,7 @@ var _ = Describe("bmoUtils", func() {
 				},
 			}
 			Expect(c.Create(context.Background(), provisioningInfo)).To(BeNil())
-			serviceIPs, inspectorIPs, err := bmoUtils.GetIronicIPs()
+			serviceIPs, inspectorIPs, err := bmoUtils.GetIronicServiceURLs()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unable to determine inspector IP, check if metal3 pod is running"))
 			Expect(serviceIPs).Should(BeNil())
