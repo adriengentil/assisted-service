@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"strings"
 	"time"
 
@@ -409,6 +410,11 @@ func (r *PreprovisioningImageReconciler) AddIronicAgentToInfraEnv(ctx context.Co
 		log.WithError(err).Error("failed to get corresponding infraEnv")
 		return false, err
 	}
+	iccConfig, err := r.BMOUtils.GetICCConfig()
+	if err != nil {
+		log.WithError(err).Info("ICC configuration is not available, will continue without it")
+	}
+
 	ironicAgentImage, ok := infraEnv.GetAnnotations()[ironicAgentImageOverrideAnnotation]
 	if !ok || ironicAgentImage == "" {
 		ironicAgentImage, err = r.getIronicAgentImageByRelease(ctx, log, infraEnvInternal)
@@ -419,9 +425,10 @@ func (r *PreprovisioningImageReconciler) AddIronicAgentToInfraEnv(ctx context.Co
 		log.Infof("Using override ironic agent image (%s) for infraEnv %s", ironicAgentImage, infraEnv.Name)
 	}
 
-	// try to get the agent image from ICC config
-	if ironicAgentImage == "" {
-		ironicAgentImage = r.BMOUtils.GetIronicAgentImage()
+	// If available, use ICC config when CPU architecture of hub cluster is equal to spoke CPU architecture
+	if iccConfig != nil && infraEnvInternal.CPUArchitecture == common.NormalizeCPUArchitecture(runtime.GOARCH) {
+		ironicAgentImage = iccConfig.IronicAgentImage
+		log.Info("Using ironic agent image (%s) from ICC config for infraEnv %s", ironicAgentImage, infraEnv.Name)
 	}
 
 	// if ironicAgentImage can't be found by version use the default
@@ -434,10 +441,16 @@ func (r *PreprovisioningImageReconciler) AddIronicAgentToInfraEnv(ctx context.Co
 		log.Infof("Setting default ironic agent image (%s) for infraEnv %s", ironicAgentImage, infraEnv.Name)
 	}
 
-	ironicServiceURL, inspectorURL, err := r.getIronicServiceURLs(ctx, infraEnvInternal)
-	if err != nil {
-		log.WithError(err).Error("failed to get IronicServiceURLs")
-		return false, err
+	var ironicServiceURL, inspectorURL string
+	if iccConfig != nil {
+		ironicServiceURL = iccConfig.IronicBaseURL
+		inspectorURL = iccConfig.IronicInspectorBaseUrl
+	} else {
+		ironicServiceURL, inspectorURL, err = r.getIronicServiceURLs(ctx, infraEnvInternal)
+		if err != nil {
+			log.WithError(err).Error("failed to get IronicServiceURLs")
+			return false, err
+		}
 	}
 	r.Log.Infof("Ironic URL is: %s", ironicServiceURL)
 	r.Log.Infof("Inspector URL is: %s", inspectorURL)
@@ -480,24 +493,25 @@ func (r *PreprovisioningImageReconciler) getIPFamilyForInfraEnv(ctx context.Cont
 }
 
 func (r *PreprovisioningImageReconciler) getIronicServiceURLs(ctx context.Context, infraEnv *common.InfraEnv) (string, string, error) {
-	ironicURLs, inspectorURLs, err := r.BMOUtils.GetIronicServiceURLs()
+	ironicIPs, inspectorIPs, err := r.BMOUtils.GetIronicIPs()
 	if err != nil {
 		return "", "", err
 	}
 
 	// default to the first IP returned
 	// v4 for dualstack hub or whatever family the single stack is
-	ironicURL := ironicURLs[0]
-	inspectorURL := inspectorURLs[0]
 
-	if len(ironicURLs) > 1 {
+	ironicURL := getUrlFromIP(ironicIPs[0])
+	inspectorURL := getUrlFromIP(inspectorIPs[0])
+
+	if len(ironicIPs) > 1 {
 		v4, v6, err := r.getIPFamilyForInfraEnv(ctx, infraEnv)
 		if err != nil {
 			r.Log.WithError(err).Warnf("failed to determine IP family for infraEnv %s", infraEnv.ID)
 		} else if !v4 && v6 {
 			// spoke is single stack v6 so take v6 hub address
-			ironicURL = ironicURLs[1]
-			inspectorURL = inspectorURLs[1]
+			ironicURL = getUrlFromIP(ironicIPs[1])
+			inspectorURL = getUrlFromIP(inspectorIPs[1])
 		}
 	}
 	return ironicURL, inspectorURL, nil

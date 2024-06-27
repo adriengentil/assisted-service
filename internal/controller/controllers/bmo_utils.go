@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	v1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/assisted-service/internal/common"
@@ -13,7 +12,6 @@ import (
 	"github.com/openshift/cluster-baremetal-operator/provisioning"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	funk "github.com/thoas/go-funk"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -22,8 +20,8 @@ import (
 
 const (
 	MinimalVersionForConvergedFlow = "4.12.0-0.alpha"
-	ICCNamespace                   = "openshift-machine-api"
-	ICCSecretName                  = "metal3-image-customization-config" // #nosec G101
+	iccNamespace                   = "openshift-machine-api"
+	iccSecretName                  = "metal3-image-customization-config" // #nosec G101
 	ironicBaseURLKey               = "IRONIC_BASE_URL"
 	ironicInspectorBaseURLKey      = "IRONIC_INSPECTOR_BASE_URL"
 	ironicAgentImageKey            = "IRONIC_AGENT_IMAGE"
@@ -32,9 +30,14 @@ const (
 //go:generate mockgen --build_flags=--mod=mod -package=controllers -destination=mock_bmo_utils.go . BMOUtils
 type BMOUtils interface {
 	ConvergedFlowAvailable() bool
-	GetIronicServiceURLs() ([]string, []string, error)
-	GetIronicAgentImage() string
-	GetICCConfg() (*iccConfig, error)
+	GetIronicIPs() ([]string, []string, error)
+	GetICCConfig() (*ICCConfig, error)
+}
+
+type ICCConfig struct {
+	IronicBaseURL          string
+	IronicInspectorBaseUrl string
+	IronicAgentImage       string
 }
 
 type bmoUtils struct {
@@ -44,12 +47,6 @@ type bmoUtils struct {
 	kubeClient     *kubernetes.Clientset
 	log            logrus.FieldLogger
 	kubeAPIEnabled bool
-}
-
-type iccConfig struct {
-	IronicBaseURL          string
-	IronicInspectorBaseUrl string
-	IronicAgentImage       string
 }
 
 func NewBMOUtils(client client.Reader, osClient *osclientset.Clientset, kubeClient *kubernetes.Clientset, log logrus.FieldLogger, kubeAPIEnabled bool) BMOUtils {
@@ -85,44 +82,7 @@ func (r *bmoUtils) ConvergedFlowAvailable() bool {
 	return available
 }
 
-func (r *bmoUtils) GetIronicServiceURLs() ([]string, []string, error) {
-	var ironicURLs, inspectorURLs []string
-	var err error
-
-	ironicURLs, inspectorURLs, err = r.getIronicURLsFromConfig()
-	if err == nil {
-		r.log.Infof("Got ironic service URLs from ICC config: %v and Inpector service URLs: %v", ironicURLs, inspectorURLs)
-		return ironicURLs, inspectorURLs, nil
-	}
-
-	r.log.WithError(err).Info("Unable to get ironic service URLs from ICC config, now trying to fetch service URLs from provisioning CR")
-
-	agentIPs, inspectorIPs, err := r.getIronicIPs()
-	if err != nil {
-		return ironicURLs, inspectorURLs, err
-	}
-	ironicURLs = funk.Map(agentIPs, getUrlFromIP).([]string)
-	inspectorURLs = funk.Map(inspectorIPs, getUrlFromIP).([]string)
-
-	return ironicURLs, inspectorURLs, nil
-}
-
-func (r *bmoUtils) GetIronicAgentImage() string {
-	secret, err := r.getImageCustomizationSecret()
-	if err != nil {
-		r.log.WithError(err)
-		return ""
-	}
-
-	ironicAgentImage, ok := secret.Data[ironicAgentImageKey]
-	if !ok {
-		return ""
-	}
-
-	return string(ironicAgentImage)
-}
-
-func (r *bmoUtils) getIronicIPs() ([]string, []string, error) {
+func (r *bmoUtils) GetIronicIPs() ([]string, []string, error) {
 	provisioningInfo, err := r.getProvisioningInfo()
 	if err != nil {
 		r.log.WithError(err).Error("unable to get provisioning CR")
@@ -146,23 +106,35 @@ func (r *bmoUtils) getIronicIPs() ([]string, []string, error) {
 	return ironicIPs, inspectorIPs, nil
 }
 
-func (r *bmoUtils) getIronicURLsFromConfig() ([]string, []string, error) {
-	secret, err := r.getImageCustomizationSecret()
-	if err != nil {
-		return nil, nil, err
+func (r *bmoUtils) GetICCConfig() (*ICCConfig, error) {
+	const configKeyNotFoundError string = "Failed to get '%s' key from secret %s in namespace %s"
+
+	secret := &corev1.Secret{}
+	namespacedName := types.NamespacedName{Name: iccSecretName, Namespace: iccNamespace}
+	if err := r.c.Get(context.TODO(), namespacedName, secret); err != nil {
+		return nil, err
 	}
 
-	ironicURLs, err := getURLs(secret, ironicBaseURLKey)
-	if err != nil {
-		return nil, nil, err
+	ironicBaseURL, ok := secret.Data[ironicBaseURLKey]
+	if !ok {
+		return nil, errors.Errorf(configKeyNotFoundError, ironicBaseURLKey, secret.Name, secret.Namespace)
 	}
 
-	inspectorURLs, err := getURLs(secret, ironicInspectorBaseURLKey)
-	if err != nil {
-		return nil, nil, err
+	ironicInspectorBaseURL, ok := secret.Data[ironicInspectorBaseURLKey]
+	if !ok {
+		return nil, errors.Errorf(configKeyNotFoundError, ironicInspectorBaseURLKey, secret.Name, secret.Namespace)
 	}
 
-	return ironicURLs, inspectorURLs, nil
+	ironicAgentImage, ok := secret.Data[ironicAgentImageKey]
+	if !ok {
+		return nil, errors.Errorf(configKeyNotFoundError, ironicAgentImageKey, secret.Name, secret.Namespace)
+	}
+
+	return &ICCConfig{
+		IronicBaseURL:          string(ironicBaseURL),
+		IronicInspectorBaseUrl: string(ironicInspectorBaseURL),
+		IronicAgentImage:       string(ironicAgentImage),
+	}, nil
 }
 
 func (r *bmoUtils) getProvisioningInfo() (*provisioning.ProvisioningInfo, error) {
@@ -180,15 +152,6 @@ func (r *bmoUtils) getProvisioningInfo() (*provisioning.ProvisioningInfo, error)
 	}, nil
 }
 
-func (r *bmoUtils) getImageCustomizationSecret() (*corev1.Secret, error) {
-	secret := &corev1.Secret{}
-	namespacedName := types.NamespacedName{Name: ICCSecretName, Namespace: ICCNamespace}
-	if err := r.c.Get(context.TODO(), namespacedName, secret); err != nil {
-		return nil, err
-	}
-	return secret, nil
-}
-
 func getUrlFromIP(ipAddr string) string {
 	if network.IsIPv6Addr(ipAddr) {
 		return "https://" + fmt.Sprintf("[%s]", ipAddr)
@@ -198,17 +161,4 @@ func getUrlFromIP(ipAddr string) string {
 	} else {
 		return ""
 	}
-}
-
-func getURLs(secret *corev1.Secret, key string) ([]string, error) {
-	data, ok := secret.Data[key]
-	if !ok {
-		return nil, errors.Errorf("Failed to get '%s' key from secret %s namespace %s", key, secret.Name, secret.Namespace)
-	}
-	URLs := strings.Split(string(data), ",")
-	if len(URLs) == 0 || URLs[0] == "" {
-		return nil, errors.Errorf("'%s' key is empty in secret %s namespace %s", key, secret.Name, secret.Namespace)
-	}
-
-	return URLs, nil
 }
