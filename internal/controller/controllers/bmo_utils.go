@@ -34,6 +34,7 @@ type BMOUtils interface {
 	ConvergedFlowAvailable() bool
 	GetIronicServiceURLs() ([]string, []string, error)
 	GetIronicAgentImage() string
+	GetICCConfg() (*iccConfig, error)
 }
 
 type bmoUtils struct {
@@ -43,6 +44,12 @@ type bmoUtils struct {
 	kubeClient     *kubernetes.Clientset
 	log            logrus.FieldLogger
 	kubeAPIEnabled bool
+}
+
+type iccConfig struct {
+	IronicBaseURL          string
+	IronicInspectorBaseUrl string
+	IronicAgentImage       string
 }
 
 func NewBMOUtils(client client.Reader, osClient *osclientset.Clientset, kubeClient *kubernetes.Clientset, log logrus.FieldLogger, kubeAPIEnabled bool) BMOUtils {
