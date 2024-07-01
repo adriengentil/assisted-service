@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/golang/mock/gomock"
 	. "github.com/onsi/ginkgo"
@@ -11,7 +10,6 @@ import (
 	v1 "github.com/openshift/api/config/v1"
 	"github.com/openshift/assisted-service/internal/common"
 	metal3iov1alpha1 "github.com/openshift/cluster-baremetal-operator/api/v1alpha1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -76,32 +74,7 @@ var _ = Describe("bmoUtils", func() {
 		})
 	})
 	Context("Get GetIronicServiceURL", func() {
-		It("success when ICC config is set", func() {
-			bmoUtils := &bmoUtils{
-				c:              c,
-				log:            log,
-				kubeAPIEnabled: true,
-			}
-			ironicURLv4 := getUrlFromIP("10.10.10.10")
-			ironicURLv6 := getUrlFromIP("2001:db8::dead:beee")
-			ironicURLs := fmt.Sprintf("%s,%s", ironicURLv4, ironicURLv6)
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      ICCSecretName,
-					Namespace: ICCNamespace,
-				},
-				Data: map[string][]byte{
-					ironicBaseURLKey:          []byte(ironicURLs),
-					ironicInspectorBaseURLKey: []byte(ironicURLs),
-				},
-			}
-			Expect(c.Create(context.Background(), secret)).To(BeNil())
-			serviceURLs, inspectorURLs, err := bmoUtils.GetIronicServiceURLs()
-			Expect(err).Should(BeNil())
-			Expect(serviceURLs).Should(Equal([]string{ironicURLv4, ironicURLv6}))
-			Expect(inspectorURLs).Should(Equal([]string{ironicURLv4, ironicURLv6}))
-		})
-		It("fallback to Provionning object when ICC config is not set ", func() {
+		It("success", func() {
 			bmoUtils := &bmoUtils{
 				c:              c,
 				log:            log,
@@ -119,11 +92,10 @@ var _ = Describe("bmoUtils", func() {
 				},
 			}
 			Expect(c.Create(context.Background(), provisioningInfo)).To(BeNil())
-			serviceURLs, inspectorURLs, err := bmoUtils.GetIronicServiceURLs()
+			serviceIPs, inspectorIPs, err := bmoUtils.GetIronicIPs()
 			Expect(err).Should(BeNil())
-			ironicURL := getUrlFromIP(ironicIP)
-			Expect(serviceURLs[0]).Should(Equal(ironicURL))
-			Expect(inspectorURLs[0]).Should(Equal(ironicURL))
+			Expect(serviceIPs[0]).Should(Equal(ironicIP))
+			Expect(inspectorIPs[0]).Should(Equal(ironicIP))
 		})
 		It("failed to determine inspector URL", func() {
 			bmoUtils := &bmoUtils{
@@ -142,7 +114,7 @@ var _ = Describe("bmoUtils", func() {
 				},
 			}
 			Expect(c.Create(context.Background(), provisioningInfo)).To(BeNil())
-			serviceIPs, inspectorIPs, err := bmoUtils.GetIronicServiceURLs()
+			serviceIPs, inspectorIPs, err := bmoUtils.GetIronicIPs()
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("unable to determine inspector IP, check if metal3 pod is running"))
 			Expect(serviceIPs).Should(BeNil())

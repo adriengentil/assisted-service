@@ -97,8 +97,8 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 		hubReleaseImage       = "quay.io/openshift-release-dev/ocp-release@sha256:5fdcafc349e184af11f71fe78c0c87531b9df123c664ff1ac82711dc15fa1532"
 		clusterVersion        *configv1.ClusterVersion
 		defaultIronicImage    = "ironic-agent-image:latest"
-		ironicServiceURLs     = []string{getUrlFromIP("198.51.100.1"), getUrlFromIP("2001:db8::dead:beee")}
-		ironicInspectorURLs   = []string{getUrlFromIP("198.51.100.2"), getUrlFromIP("2001:db8::dead:beef")}
+		ironicServiceIPs      = []string{"198.51.100.1", "2001:db8::dead:beee"}
+		ironicInspectorIPs    = []string{"198.51.100.2", "2001:db8::dead:beef"}
 	)
 
 	BeforeEach(func() {
@@ -166,15 +166,14 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			}}
 			ppi = newPreprovisioningImage("testPPI", testNamespace, InfraEnvLabel, "testInfraEnv", bmh.Name)
 			Expect(c.Create(ctx, ppi)).To(BeNil())
-			mockBMOUtils.EXPECT().GetIronicServiceURLs().AnyTimes().Return(ironicServiceURLs, ironicInspectorURLs, nil)
-			mockBMOUtils.EXPECT().GetIronicAgentImage().AnyTimes().Return("")
+			mockBMOUtils.EXPECT().GetIronicIPs().AnyTimes().Return(ironicServiceIPs, ironicInspectorIPs, nil)
 		})
 		AfterEach(func() {
 			mockCtrl.Finish()
 		})
 
 		setInfraEnvIronicConfig := func() {
-			conf, err := ignition.GenerateIronicConfig(ironicServiceURLs[0], ironicInspectorURLs[0], *backendInfraEnv, defaultIronicImage)
+			conf, err := ignition.GenerateIronicConfig(getUrlFromIP(ironicServiceIPs[0]), getUrlFromIP(ironicInspectorIPs[0]), *backendInfraEnv, defaultIronicImage)
 			Expect(err).NotTo(HaveOccurred())
 			backendInfraEnv.InternalIgnitionConfigOverride = string(conf)
 			mockInstallerInternal.EXPECT().GetInfraEnvByKubeKey(gomock.Any()).Return(backendInfraEnv, nil)
@@ -189,11 +188,12 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 					Expect(params.InfraEnvID).To(Equal(*backendInfraEnv.ID))
 					Expect(params.InfraEnvUpdateParams.IgnitionConfigOverride).To(Equal(""))
 					Expect(*internalIgnitionConfig).Should(ContainSubstring(defaultIronicImage))
-					Expect(*internalIgnitionConfig).Should(ContainSubstring(url.QueryEscape(ironicServiceURLs[0])))
-					Expect(*internalIgnitionConfig).Should(ContainSubstring(url.QueryEscape(ironicInspectorURLs[0])))
+					Expect(*internalIgnitionConfig).Should(ContainSubstring(ironicServiceIPs[0]))
+					Expect(*internalIgnitionConfig).Should(ContainSubstring(ironicInspectorIPs[0]))
 				}).Return(
 				&common.InfraEnv{InfraEnv: models.InfraEnv{ClusterID: clusterID, ID: &infraEnvID, DownloadURL: downloadURL, CPUArchitecture: infraEnvArch}, GeneratedAt: strfmt.DateTime(time.Now())}, nil).Times(1)
 			mockCRDEventsHandler.EXPECT().NotifyInfraEnvUpdates(infraEnv.Name, infraEnv.Namespace).Times(1)
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
 			Expect(res).To(Equal(ctrl.Result{}))
@@ -216,10 +216,11 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			mockInstallerInternal.EXPECT().UpdateInfraEnvInternal(gomock.Any(), gomock.Any(), gomock.Any()).
 				Do(func(ctx context.Context, params installer.UpdateInfraEnvParams, internalIgnitionConfig *string) {
 					Expect(params.InfraEnvID).To(Equal(*backendInfraEnv.ID))
-					Expect(*internalIgnitionConfig).Should(ContainSubstring(url.QueryEscape(ironicServiceURLs[1])))
-					Expect(*internalIgnitionConfig).Should(ContainSubstring(url.QueryEscape(ironicInspectorURLs[1])))
+					Expect(*internalIgnitionConfig).Should(ContainSubstring(url.QueryEscape(ironicServiceIPs[1])))
+					Expect(*internalIgnitionConfig).Should(ContainSubstring(url.QueryEscape(ironicInspectorIPs[1])))
 				}).Return(
 				&common.InfraEnv{InfraEnv: models.InfraEnv{ClusterID: clusterID, ID: &infraEnvID, DownloadURL: downloadURL, CPUArchitecture: infraEnvArch}, GeneratedAt: strfmt.DateTime(time.Now())}, nil).Times(1)
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 			mockCRDEventsHandler.EXPECT().NotifyInfraEnvUpdates(infraEnv.Name, infraEnv.Namespace).Times(1)
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -242,6 +243,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			}}
 			Expect(c.Create(ctx, infraEnv)).To(BeNil())
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -270,6 +272,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			}}
 			Expect(c.Create(ctx, infraEnv)).To(BeNil())
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -306,6 +309,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			Expect(c.Create(ctx, infraEnv)).To(BeNil())
 
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -337,6 +341,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			}}
 			Expect(c.Create(ctx, infraEnv)).To(BeNil())
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -368,6 +373,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			}
 			Expect(c.Create(ctx, infraEnv)).To(BeNil())
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -395,6 +401,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			SetImageUrl(ppi, *infraEnv)
 			Expect(c.Update(ctx, ppi)).To(BeNil())
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -461,6 +468,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 				}).Return(
 				&common.InfraEnv{InfraEnv: models.InfraEnv{ClusterID: clusterID, ID: &infraEnvID, DownloadURL: downloadURL, CPUArchitecture: infraEnvArch}, GeneratedAt: strfmt.DateTime(time.Now())}, nil).Times(1)
 			mockCRDEventsHandler.EXPECT().NotifyInfraEnvUpdates(infraEnv.Name, infraEnv.Namespace).Times(1)
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
 			Expect(res).To(Equal(ctrl.Result{}))
@@ -548,6 +556,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			Expect(c.Update(ctx, ppi)).To(Succeed())
 
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -569,6 +578,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			Expect(c.Update(ctx, ppi)).To(Succeed())
 
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -586,6 +596,7 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 			infraEnv.Status = aiv1beta1.InfraEnvStatus{}
 			Expect(c.Create(ctx, infraEnv)).To(BeNil())
 			setInfraEnvIronicConfig()
+			mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
 
 			res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 			Expect(err).To(BeNil())
@@ -639,8 +650,8 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 		backendInfraEnv.ClusterID = ""
 		mockInstallerInternal.EXPECT().GetInfraEnvByKubeKey(gomock.Any()).Return(backendInfraEnv, nil)
 
-		mockBMOUtils.EXPECT().GetIronicServiceURLs().Return(nil, nil, fmt.Errorf("failed to get urls"))
-		mockBMOUtils.EXPECT().GetIronicAgentImage().AnyTimes().Return("")
+		mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
+		mockBMOUtils.EXPECT().GetIronicIPs().Return(nil, nil, fmt.Errorf("failed to get urls"))
 		res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))
 		Expect(err).To(HaveOccurred())
 		Expect(err.Error()).To(Equal("failed to get urls"))
@@ -654,8 +665,8 @@ var _ = Describe("PreprovisioningImage reconcile", func() {
 		backendInfraEnv.ClusterID = ""
 		mockInstallerInternal.EXPECT().GetInfraEnvByKubeKey(gomock.Any()).Return(backendInfraEnv, nil)
 		Expect(c.Create(ctx, infraEnv)).To(BeNil())
-		mockBMOUtils.EXPECT().GetIronicServiceURLs().AnyTimes().Return(ironicServiceURLs, ironicInspectorURLs, nil)
-		mockBMOUtils.EXPECT().GetIronicAgentImage().AnyTimes().Return("")
+		mockBMOUtils.EXPECT().GetICCConfig().Times(1).Return(nil, errors.Errorf("ICC configuration is not available"))
+		mockBMOUtils.EXPECT().GetIronicIPs().AnyTimes().Return(ironicServiceIPs, ironicInspectorIPs, nil)
 		mockInstallerInternal.EXPECT().UpdateInfraEnvInternal(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, errors.New("Failed to update infraEnvInternal"))
 
 		res, err := pr.Reconcile(ctx, newPreprovisioningImageRequest(ppi))

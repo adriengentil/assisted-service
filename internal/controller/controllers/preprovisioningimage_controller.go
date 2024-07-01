@@ -410,10 +410,6 @@ func (r *PreprovisioningImageReconciler) AddIronicAgentToInfraEnv(ctx context.Co
 		log.WithError(err).Error("failed to get corresponding infraEnv")
 		return false, err
 	}
-	iccConfig, err := r.BMOUtils.GetICCConfig()
-	if err != nil {
-		log.WithError(err).Info("ICC configuration is not available, will continue without it")
-	}
 
 	ironicAgentImage, ok := infraEnv.GetAnnotations()[ironicAgentImageOverrideAnnotation]
 	if !ok || ironicAgentImage == "" {
@@ -425,10 +421,26 @@ func (r *PreprovisioningImageReconciler) AddIronicAgentToInfraEnv(ctx context.Co
 		log.Infof("Using override ironic agent image (%s) for infraEnv %s", ironicAgentImage, infraEnv.Name)
 	}
 
-	// If available, use ICC config when CPU architecture of hub cluster is equal to spoke CPU architecture
+	// Retrieve the configuration only if the agent image was not overriden
+	// in order to prevent a situation where the configuration is not
+	// compatible with a different agent image.
+	var iccConfig *ICCConfig
+	if ironicAgentImage == "" {
+		iccConfig, err = r.BMOUtils.GetICCConfig()
+		if err != nil {
+			log.WithError(err).Info("ICC configuration is not available, will continue without it")
+		}
+	}
+
+	// If available, use ICC config when CPU architecture of hub cluster is
+	// equal to spoke CPU architecture.
 	if iccConfig != nil && infraEnvInternal.CPUArchitecture == common.NormalizeCPUArchitecture(runtime.GOARCH) {
 		ironicAgentImage = iccConfig.IronicAgentImage
 		log.Info("Using ironic agent image (%s) from ICC config for infraEnv %s", ironicAgentImage, infraEnv.Name)
+	} else {
+		// Prevent further usage of ICC configuration since we do not
+		// use the agent image specified in it.
+		iccConfig = nil
 	}
 
 	// if ironicAgentImage can't be found by version use the default
@@ -441,16 +453,10 @@ func (r *PreprovisioningImageReconciler) AddIronicAgentToInfraEnv(ctx context.Co
 		log.Infof("Setting default ironic agent image (%s) for infraEnv %s", ironicAgentImage, infraEnv.Name)
 	}
 
-	var ironicServiceURL, inspectorURL string
-	if iccConfig != nil {
-		ironicServiceURL = iccConfig.IronicBaseURL
-		inspectorURL = iccConfig.IronicInspectorBaseUrl
-	} else {
-		ironicServiceURL, inspectorURL, err = r.getIronicServiceURLs(ctx, infraEnvInternal)
-		if err != nil {
-			log.WithError(err).Error("failed to get IronicServiceURLs")
-			return false, err
-		}
+	ironicServiceURL, inspectorURL, err := r.getIronicServiceURLs(ctx, infraEnvInternal, iccConfig)
+	if err != nil {
+		log.WithError(err).Error("failed to get IronicServiceURLs")
+		return false, err
 	}
 	r.Log.Infof("Ironic URL is: %s", ironicServiceURL)
 	r.Log.Infof("Inspector URL is: %s", inspectorURL)
@@ -492,7 +498,11 @@ func (r *PreprovisioningImageReconciler) getIPFamilyForInfraEnv(ctx context.Cont
 	return network.GetConfiguredAddressFamilies(cluster)
 }
 
-func (r *PreprovisioningImageReconciler) getIronicServiceURLs(ctx context.Context, infraEnv *common.InfraEnv) (string, string, error) {
+func (r *PreprovisioningImageReconciler) getIronicServiceURLs(ctx context.Context, infraEnv *common.InfraEnv, iccConfig *ICCConfig) (string, string, error) {
+	if iccConfig != nil {
+		return iccConfig.IronicBaseURL, iccConfig.IronicInspectorBaseUrl, nil
+	}
+
 	ironicIPs, inspectorIPs, err := r.BMOUtils.GetIronicIPs()
 	if err != nil {
 		return "", "", err

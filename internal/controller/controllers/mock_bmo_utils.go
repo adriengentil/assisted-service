@@ -47,32 +47,33 @@ func (mr *MockBMOUtilsMockRecorder) ConvergedFlowAvailable() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ConvergedFlowAvailable", reflect.TypeOf((*MockBMOUtils)(nil).ConvergedFlowAvailable))
 }
 
-// GetIronicAgentImage mocks base method.
-func (m *MockBMOUtils) GetIronicAgentImage() string {
+// GetICCConfig mocks base method.
+func (m *MockBMOUtils) GetICCConfig() (*ICCConfig, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIronicAgentImage")
-	ret0, _ := ret[0].(string)
-	return ret0
+	ret := m.ctrl.Call(m, "GetICCConfig")
+	ret0, _ := ret[0].(*ICCConfig)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
 }
 
-// GetIronicAgentImage indicates an expected call of GetIronicAgentImage.
-func (mr *MockBMOUtilsMockRecorder) GetIronicAgentImage() *gomock.Call {
+// GetICCConfig indicates an expected call of GetICCConfig.
+func (mr *MockBMOUtilsMockRecorder) GetICCConfig() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIronicAgentImage", reflect.TypeOf((*MockBMOUtils)(nil).GetIronicAgentImage))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetICCConfig", reflect.TypeOf((*MockBMOUtils)(nil).GetICCConfig))
 }
 
-// GetIronicServiceURLs mocks base method.
-func (m *MockBMOUtils) GetIronicServiceURLs() ([]string, []string, error) {
+// GetIronicIPs mocks base method.
+func (m *MockBMOUtils) GetIronicIPs() ([]string, []string, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetIronicServiceURLs")
+	ret := m.ctrl.Call(m, "GetIronicIPs")
 	ret0, _ := ret[0].([]string)
 	ret1, _ := ret[1].([]string)
 	ret2, _ := ret[2].(error)
 	return ret0, ret1, ret2
 }
 
-// GetIronicServiceURLs indicates an expected call of GetIronicServiceURLs.
-func (mr *MockBMOUtilsMockRecorder) GetIronicServiceURLs() *gomock.Call {
+// GetIronicIPs indicates an expected call of GetIronicIPs.
+func (mr *MockBMOUtilsMockRecorder) GetIronicIPs() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIronicServiceURLs", reflect.TypeOf((*MockBMOUtils)(nil).GetIronicServiceURLs))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetIronicIPs", reflect.TypeOf((*MockBMOUtils)(nil).GetIronicIPs))
 }
