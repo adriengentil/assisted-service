@@ -282,7 +282,6 @@ func NewMetricsManager(registry prometheus.Registerer, eventsHandler eventsapi.H
 			Name:      counterMonitoredHosts,
 			Help:      counterDescriptionMonitoredHosts,
 		}, []string{hosts}),
-
 		serviceLogicMonitoredClusters: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: namespace,
 			Subsystem: subsystem,
@@ -291,7 +290,9 @@ func NewMetricsManager(registry prometheus.Registerer, eventsHandler eventsapi.H
 		}, []string{hosts}),
 	}
 
-	m.collectors = append(m.collectors, newDirectoryUsageCollector(metricsManagerConfig.DirectoryUsageMonitorConfig.Directories, diskStatsHelper, log))
+	m.collectors = append(m.collectors,
+		newDirectoryUsageCollector(metricsManagerConfig.DirectoryUsageMonitorConfig.Directories, diskStatsHelper, log),
+		newInventoryCacheCollector())
 
 	registry.MustRegister(
 		m.serviceLogicClusterCreation,
